@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Firebase Secret Vault</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+
+<style>
+body{
+    font-family:Arial;
+    background:#111;
+    color:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    margin:0;
+}
+
+.container{
+    width:320px;
+    background:#222;
+    padding:20px;
+    border-radius:12px;
+    text-align:center;
+}
+
+input,button{
+    width:100%;
+    padding:10px;
+    margin:5px 0;
+    border:none;
+    border-radius:8px;
+}
+
+button{ cursor:pointer; }
+
+#settingsBtn{
+    position:fixed;
+    top:10px;
+    right:10px;
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    background:#444;
+    color:white;
+}
+
+.secret{
+    margin-top:10px;
+    padding:10px;
+    background:#333;
+    border-radius:8px;
+    word-break:break-all;
+}
+
+#adminPanel{
+    display:none;
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:#222;
+    padding:20px;
+    border-radius:12px;
+    width:300px;
+}
+</style>
+</head>
+
+<body>
+
+<button id="settingsBtn">⚙</button>
+
+<div class="container">
+    <h2>Cloud Vault</h2>
+
+    <input type="password" id="userPass" placeholder="Enter Password">
+    <button onclick="unlock()">Unlock</button>
+
+    <div id="secretArea" style="display:none">
+        <div class="secret" id="secretText"></div>
+    </div>
+</div>
+
+<div id="adminPanel">
+    <h3>Admin Panel</h3>
+
+    <input id="newSecret" placeholder="Secret Text">
+    <input id="newUserPass" placeholder="User Password">
+    <input id="newAdminPass" placeholder="Admin Password">
+
+    <button onclick="saveSettings()">Save</button>
+</div>
+
+<script>
+
+/* 🔥 FIREBASE CONFIG (PUT YOURS HERE) */
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* CLOUD DATA */
+let data = {
+    secretText: "",
+    userPassword: "",
+    adminPassword: ""
+};
+
+/* LOAD FROM FIREBASE */
+async function loadData(){
+    const doc = await db.collection("vault").doc("main").get();
+
+    if(doc.exists){
+        data = doc.data();
+    } else {
+        data = {
+            secretText: "Default Secret",
+            userPassword: "1234",
+            adminPassword: "admin123"
+        };
+        await db.collection("vault").doc("main").set(data);
+    }
+}
+
+window.onload = loadData;
+
+/* USER LOGIN */
+function unlock(){
+    const p = document.getElementById("userPass").value;
+
+    if(p === data.userPassword){
+        document.getElementById("secretArea").style.display="block";
+        document.getElementById("secretText").textContent = data.secretText;
+    } else {
+        alert("Wrong Password");
+    }
+}
+
+/* ADMIN PANEL */
+document.getElementById("settingsBtn").onclick = function(){
+
+    let pass = prompt("Admin Password");
+
+    if(pass === data.adminPassword){
+
+        document.getElementById("adminPanel").style.display="block";
+
+        document.getElementById("newSecret").value = data.secretText;
+        document.getElementById("newUserPass").value = data.userPassword;
+        document.getElementById("newAdminPass").value = data.adminPassword;
+
+    } else {
+        alert("Access Denied");
+    }
+};
+
+/* SAVE TO FIREBASE */
+async function saveSettings(){
+
+    data.secretText = document.getElementById("newSecret").value;
+    data.userPassword = document.getElementById("newUserPass").value;
+    data.adminPassword = document.getElementById("newAdminPass").value;
+
+    await db.collection("vault").doc("main").set(data);
+
+    alert("Saved to Firebase Cloud!");
+}
+
+</script>
+
+</body>
+</html>
